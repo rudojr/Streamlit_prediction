@@ -166,27 +166,16 @@ plot_prediction_price(test_predictions)
 final_prediction = test_predictions.iloc[-1]
 st.write(f"Giá trị dự đoán cho ngày tiếp theo là: {final_prediction}")
 #####################################################################################################
-def predict_exponential_smoothing(data, n):
-    last_date = data.index[-1]
-    forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=n)
+def exponential_smoothing(data, n_predictions):
+    alpha = 0.1
+    data['Exp_Smoothing'] = data['Close'].ewm(alpha=alpha, adjust=False).mean()
+    
+    for i in range(1, n_predictions + 1):
+        last_date = data['Date'].iloc[-1] + pd.DateOffset(days=i)
+        last_value = data['Exp_Smoothing'].iloc[-1]
+        data = pd.concat([data, pd.DataFrame({'Date': [last_date], 'Exp_Smoothing': [last_value]})], ignore_index=True)
 
-    for date in forecast_dates:
-        last_value = data.loc[last_date, 'Exp_Smoothing_alpha_0.1']
-        forecast_value = last_value  # Đây là nơi để thực hiện dự đoán thực tế
-        data.loc[date] = forecast_value
-        last_date = date
-
-    st.write(data.tail())
-
-    fig = px.line(data, x=data.index, y=['Close', 'Exp_Smoothing_alpha_0.1'])
-    fig.update_layout(
-        xaxis_title='Date',
-        yaxis_title='Price',
-        title='Exponential Smoothing with alpha=0.1'
-    )
-    st.plotly_chart(fig)
-
-    st.write(f"Predicted close value for {data.index[-1]}: {data.iloc[-1]['Exp_Smoothing_alpha_0.1']}")
+    return data
 ####################################################################################################
 col1, col2 = st.columns(2)
 
@@ -231,4 +220,13 @@ with col2:
             st.plotly_chart(fig)
         
         elif model_options == 'Exponential Smoothing':
-            predict_exponential_smoothing(data, prediction_day)
+            exponential_smoothing(data, prediction_day)
+            fig = px.line(data, x='Date', y=['Close', 'Exp_Smoothing'], labels={'value': 'Price', 'variable': 'Metric', 'Date': 'Date'})
+            fig.update_layout(
+                xaxis_title='Date',
+                yaxis_title='Price',
+                title=f'Exponential Smoothing with alpha = 0.1'
+            )
+            st.plotly_chart(fig)
+            predicted_price = data['Exp_Smoothing'].iloc[-1]
+            st.write(f"Giá dự đoán cho ngày cuối cùng trong {prediction_day} ngày tiếp theo là: {round(predicted_price,2)}")
