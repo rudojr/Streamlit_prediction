@@ -48,6 +48,12 @@ def plot_raw_data():
 
 plot_raw_data()
 
+close_mean = data['Close'].mean()
+close_variance = data['Close'].var()
+
+st.write(f"Trung bình giá đóng cửa: {round(close_mean,2)}")
+st.write(f"Phương sai giá đóng cửa: {round(close_variance,2)}")
+
 max_price = data['High'].max()
 min_price = data['Low'].min()
 
@@ -136,12 +142,14 @@ fig.update_layout(
 st.plotly_chart(fig)
 st.write(f"Predicted close value for {data.index[-1]}: {data.iloc[-1]['Exp_Smoothing_alpha_0.1']}")
 
-#####################################################################################################
-option = st.selectbox(
-    'Lựa chọn dự đoán:',
-    ('Dự báo giá 1 ngày tiếp theo','Dự báo giá 1 tuần tiếp theo','Dự báo giá 1 tháng tiếp theo','Dự báo giá 1 năm tiếp theo') 
-)
-
+def plot_prediction_price(test_predictions):
+    plt.figure(figsize=(12, 6))
+    data['Close'].plot(legend=True, label='Actual Close Prices')
+    test_predictions.plot(legend=True, label='Predicted Close Prices')
+    plt.title('Actual and Predicted Close Prices using Holt-Winters')
+    plt.xlabel('Time')
+    plt.ylabel('Close Price')
+    st.pyplot(plt)
 #Du doan gia với holt winters
 def train_holt_winters(data, n_years):
     data['Close'] = pd.to_numeric(data['Close'], errors='coerce')
@@ -153,41 +161,74 @@ def train_holt_winters(data, n_years):
     test_predictions.index = np.arange(max(data.index), max(data.index) + n_predictions)
     return model_fit, test_predictions
 
-def plot_prediction_price(test_predictions):
-    plt.figure(figsize=(12, 6))
-    data['Close'].plot(legend=True, label='Actual Close Prices')
-    test_predictions.plot(legend=True, label='Predicted Close Prices')
-    plt.title('Actual and Predicted Close Prices using Holt-Winters')
-    plt.xlabel('Time')
-    plt.ylabel('Close Price')
-    st.pyplot(plt)
+fitted_model, test_predictions = train_holt_winters(data, 1)
+plot_prediction_price(test_predictions)
+final_prediction = test_predictions.iloc[-1]
+st.write(f"Giá trị dự đoán cho ngày tiếp theo là: {final_prediction}")
+#####################################################################################################
+def predict_exponential_smoothing(data, n):
+    last_date = data.index[-1]
+    forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=n)
 
-if option == 'Dự báo giá 1 ngày tiếp theo':
-    fitted_model, test_predictions = train_holt_winters(data, 1)
-    plot_prediction_price(test_predictions)
-    final_prediction = test_predictions.iloc[-1]
-    st.write(f"Giá trị dự đoán cho ngày tiếp theo là: {final_prediction}")
-    
-elif option == 'Dự báo giá 1 tuần tiếp theo':
-    fitted_model, test_predictions = train_holt_winters(data, 7)
-    for i in test_predictions:
-        st.write(i)
-    plot_prediction_price(test_predictions)
-    final_prediction = test_predictions.iloc[-1]
-    st.write(f"Giá trị dự đoán cho tuần tiếp theo là: {final_prediction}")
-    
-elif option == 'Dự báo giá 1 tháng tiếp theo':
-    fitted_model, test_predictions = train_holt_winters(data, 30)
-    st.write("Thông tin tổng quát về dữ liệu dự đoán:")
-    st.write(test_predictions.describe())
-    plot_prediction_price(test_predictions)
-    final_prediction = test_predictions.iloc[-1]
-    st.write(f"Giá trị dự đoán cho tháng tiếp theo là: {final_prediction}")
-    
-elif option == 'Dự báo giá 1 năm tiếp theo':
-    fitted_model, test_predictions = train_holt_winters(data, 365)
-    st.write("Thông tin tổng quát về dữ liệu dự đoán:")
-    st.write(test_predictions.describe())
-    plot_prediction_price(test_predictions)
-    final_prediction = test_predictions.iloc[-1]
-    st.write(f"Giá trị dự đoán cho năm tiếp theo là: {final_prediction}")
+    for date in forecast_dates:
+        last_value = data.loc[last_date, 'Exp_Smoothing_alpha_0.1']
+        forecast_value = last_value  # Đây là nơi để thực hiện dự đoán thực tế
+        data.loc[date] = forecast_value
+        last_date = date
+
+    st.write(data.tail())
+
+    fig = px.line(data, x=data.index, y=['Close', 'Exp_Smoothing_alpha_0.1'])
+    fig.update_layout(
+        xaxis_title='Date',
+        yaxis_title='Price',
+        title='Exponential Smoothing with alpha=0.1'
+    )
+    st.plotly_chart(fig)
+
+    st.write(f"Predicted close value for {data.index[-1]}: {data.iloc[-1]['Exp_Smoothing_alpha_0.1']}")
+####################################################################################################
+col1, col2 = st.columns(2)
+
+with col1:
+    model_options = st.selectbox(
+        'Lựa chọn mô hình dự đoán:',
+        ('Moving average period 3', 'Moving average period 6','Exponential Smoothing','Holt-Winter') 
+    )
+    if model_options == 'Holt-Winter' or model_options == 'Exponential Smoothing':
+            prediction_day = st.number_input('Ngày dự đoán', min_value=1, step=1, value=1)
+    prediction_button = st.button("Dự đoán")
+
+with col2:
+    if prediction_button:
+        if model_options == 'Holt-Winter':
+            fitted_model, test_predictions = train_holt_winters(data, prediction_day)
+            plot_prediction_price(test_predictions)
+            final_prediction = test_predictions.iloc[-1]
+            st.write(f"Giá trị dự đoán cho {prediction_day} ngày tiếp theo là: {round(final_prediction,2)}")
+        
+        elif model_options == 'Moving average period 3':
+            data['3_day_mavg'] = data['Close'].rolling(3).mean()
+            st.write(data[['Date','Close','3_day_mavg']].tail())
+            fig = px.line(data, x=data.index, y=['Close', '3_day_mavg'], labels={'value': 'Price', 'variable': 'Metric', 'index': 'Date'})
+            fig.update_layout(
+                xaxis_title='Date',
+                yaxis_title='Price',
+                title='Moving average with period 3'
+            )
+            st.plotly_chart(fig)
+        
+        
+        elif model_options == 'Moving average period 6':
+            data['6_day_mavg'] = data['Close'].rolling(6).mean()
+            st.write(data[['Date','Close','6_day_mavg']].tail())
+            fig = px.line(data, x=data.index, y=['Close', '6_day_mavg'], labels={'value': 'Price', 'variable': 'Metric', 'index': 'Date'})
+            fig.update_layout(
+                xaxis_title='Date',
+                yaxis_title='Price',
+                title='Moving average with period 6'
+            )
+            st.plotly_chart(fig)
+        
+        elif model_options == 'Exponential Smoothing':
+            predict_exponential_smoothing(data, prediction_day)
