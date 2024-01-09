@@ -85,45 +85,30 @@ st.write(f"Cổ phiếu đạt giá trị thấp nhất vào ngày {ngay_min_pri
 # ax.grid(True)
 
 data['Year'] = pd.to_datetime(data['Date']).dt.year
-
-# Tạo DataFrame chứa giá trị của từng cột cho mỗi năm
 data_by_year = data.groupby('Year').mean().reset_index()
 
-# Vẽ biểu đồ cho từng năm và hiển thị giá trị trung bình ngay dưới biểu đồ
-for index, row in data_by_year.iterrows():
-    year_data = data[data['Year'] == row['Year']]
-    
-    st.subheader(f'Biểu đồ Open, Low, High, Close năm {row["Year"]}')
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(year_data['Date'], year_data['Open'], label='Open')
-    ax.plot(year_data['Date'], year_data['Low'], label='Low')
-    ax.plot(year_data['Date'], year_data['High'], label='High')
-    ax.plot(year_data['Date'], year_data['Close'], label='Close')
-    
-    ax.set_xlabel('Ngày')
-    ax.set_ylabel('Giá trị')
-    ax.set_title(f'Biểu đồ Open, Low, High, Close năm {row["Year"]}')
-    ax.legend()
-    ax.grid(True)
+# Hiển thị biểu đồ sử dụng Streamlit và Matplotlib
+st.title('Biểu đồ giá trị trung bình của Open, Low, High, Close qua các năm')
 
-    st.pyplot(fig)
-    
-    st.write(f"Giá trị trung bình Open: {row['Open']}")
-    st.write(f"Giá trị trung bình Low: {row['Low']}")
-    st.write(f"Giá trị trung bình High: {row['High']}")
-    st.write(f"Giá trị trung bình Close: {row['Close']}")
+# Tạo biểu đồ đường
+plt.figure(figsize=(10, 6))
 
-# average_price_2023 = average_prices_2023['Close'].values[0]
-# average_price_other_years = other_years['Close'].mean()
+# Vẽ đường cho giá trị trung bình của từng cột qua các năm
+plt.plot(data_by_year['Year'], data_by_year['Open'], label='Open')
+plt.plot(data_by_year['Year'], data_by_year['Low'], label='Low')
+plt.plot(data_by_year['Year'], data_by_year['High'], label='High')
+plt.plot(data_by_year['Year'], data_by_year['Close'], label='Close')
 
-# if average_price_2023 > average_price_other_years:
-#     st.write("Giá trị trung bình cổ phiếu năm 2023 cao hơn so với các năm còn lại.")
-# elif average_price_2023 < average_price_other_years:
-#     st.write("Giá trị trung bình cổ phiếu năm 2023 thấp hơn so với các năm còn lại.")
-# else:
-#     st.write("Giá trị trung bình cổ phiếu năm 2023 không khác biệt so với các năm còn lại.")
+# Thiết lập các thông số cho biểu đồ
+plt.xlabel('Năm')
+plt.ylabel('Giá trị trung bình')
+plt.title('Biểu đồ giá trị trung bình của Open, Low, High, Close qua các năm')
+plt.legend()
+plt.grid(True)
 
-# Hiển thị biểu đồ trên Streamlit
+# Hiển thị biểu đồ sử dụng Streamlit
+st.pyplot(plt)
+
 ###################################################################################################
 ##Rolling 3
 data['3_day_mavg'] = data['Close'].rolling(3).mean()
