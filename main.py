@@ -66,36 +66,64 @@ st.write(f"Cổ phiếu đạt giá trị thấp nhất vào ngày {ngay_min_pri
 
 ##########################################################################################################
 
+# data['Year'] = pd.to_datetime(data['Date']).dt.year
+
+# # Tạo DataFrame chứa giá trị trung bình của các năm
+# average_prices = data.groupby('Year')['Close'].mean().reset_index()
+
+# average_prices_2023 = average_prices[average_prices['Year'] == 2023]
+# other_years = average_prices[average_prices['Year'] != 2023]
+# st.subheader('Biểu đồ giá trị trung bình cổ phiếu năm 2023 so với các năm còn lại')
+# fig, ax = plt.subplots(figsize=(10, 6))
+
+# ax.plot(other_years['Year'], other_years['Close'], label='Các năm còn lại')
+# ax.scatter(average_prices_2023['Year'], average_prices_2023['Close'], color='red', label='Năm 2023')
+# ax.set_xlabel('Năm')
+# ax.set_ylabel('Giá trị trung bình cổ phiếu')
+# ax.set_title('Giá trị trung bình cổ phiếu năm 2023 so với các năm còn lại')
+# ax.legend()
+# ax.grid(True)
+
 data['Year'] = pd.to_datetime(data['Date']).dt.year
 
-# Tạo DataFrame chứa giá trị trung bình của các năm
-average_prices = data.groupby('Year')['Close'].mean().reset_index()
+# Tạo DataFrame chứa giá trị của từng cột cho mỗi năm
+data_by_year = data.groupby('Year').mean().reset_index()
 
-average_prices_2023 = average_prices[average_prices['Year'] == 2023]
-other_years = average_prices[average_prices['Year'] != 2023]
-st.subheader('Biểu đồ giá trị trung bình cổ phiếu năm 2023 so với các năm còn lại')
-fig, ax = plt.subplots(figsize=(10, 6))
+# Vẽ biểu đồ cho từng năm và hiển thị giá trị trung bình ngay dưới biểu đồ
+for index, row in data_by_year.iterrows():
+    year_data = data[data['Year'] == row['Year']]
+    
+    st.subheader(f'Biểu đồ Open, Low, High, Close năm {row["Year"]}')
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(year_data['Date'], year_data['Open'], label='Open')
+    ax.plot(year_data['Date'], year_data['Low'], label='Low')
+    ax.plot(year_data['Date'], year_data['High'], label='High')
+    ax.plot(year_data['Date'], year_data['Close'], label='Close')
+    
+    ax.set_xlabel('Ngày')
+    ax.set_ylabel('Giá trị')
+    ax.set_title(f'Biểu đồ Open, Low, High, Close năm {row["Year"]}')
+    ax.legend()
+    ax.grid(True)
 
-ax.plot(other_years['Year'], other_years['Close'], label='Các năm còn lại')
-ax.scatter(average_prices_2023['Year'], average_prices_2023['Close'], color='red', label='Năm 2023')
-ax.set_xlabel('Năm')
-ax.set_ylabel('Giá trị trung bình cổ phiếu')
-ax.set_title('Giá trị trung bình cổ phiếu năm 2023 so với các năm còn lại')
-ax.legend()
-ax.grid(True)
+    st.pyplot(fig)
+    
+    st.write(f"Giá trị trung bình Open: {row['Open']}")
+    st.write(f"Giá trị trung bình Low: {row['Low']}")
+    st.write(f"Giá trị trung bình High: {row['High']}")
+    st.write(f"Giá trị trung bình Close: {row['Close']}")
 
-average_price_2023 = average_prices_2023['Close'].values[0]
-average_price_other_years = other_years['Close'].mean()
+# average_price_2023 = average_prices_2023['Close'].values[0]
+# average_price_other_years = other_years['Close'].mean()
 
-if average_price_2023 > average_price_other_years:
-    st.write("Giá trị trung bình cổ phiếu năm 2023 cao hơn so với các năm còn lại.")
-elif average_price_2023 < average_price_other_years:
-    st.write("Giá trị trung bình cổ phiếu năm 2023 thấp hơn so với các năm còn lại.")
-else:
-    st.write("Giá trị trung bình cổ phiếu năm 2023 không khác biệt so với các năm còn lại.")
+# if average_price_2023 > average_price_other_years:
+#     st.write("Giá trị trung bình cổ phiếu năm 2023 cao hơn so với các năm còn lại.")
+# elif average_price_2023 < average_price_other_years:
+#     st.write("Giá trị trung bình cổ phiếu năm 2023 thấp hơn so với các năm còn lại.")
+# else:
+#     st.write("Giá trị trung bình cổ phiếu năm 2023 không khác biệt so với các năm còn lại.")
 
 # Hiển thị biểu đồ trên Streamlit
-st.pyplot(fig)
 ###################################################################################################
 ##Rolling 3
 data['3_day_mavg'] = data['Close'].rolling(3).mean()
